@@ -1,0 +1,3 @@
+# Regole
+- pippo
+- pluto

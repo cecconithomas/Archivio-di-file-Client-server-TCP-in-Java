@@ -8,6 +8,8 @@ public class GestoreClient implements Runnable {
     private final Socket clientSocket;
     private final String cartella;
 
+    private static final String[] ESTENSIONI_AMMESSE = { "txt", "md", "csv" };
+
     public GestoreClient(Socket clientSocket, String cartella) {
         this.clientSocket = clientSocket;
         this.cartella = cartella;
@@ -55,18 +57,32 @@ public class GestoreClient implements Runnable {
             return;
         }
 
-        File file = new File(cartella, parti[1]);
+        String nomeBase = parti[1];
+        File fileTrovato = null;
+        String estensioneTrovata = null;
 
-        if (!file.exists() || !file.isFile()) {
+        for (String ext : ESTENSIONI_AMMESSE) {
+            File candidato = new File(cartella, nomeBase + "." + ext);
+            if (candidato.isFile()) {
+                fileTrovato = candidato;
+                estensioneTrovata = ext;
+                break; // Si ferma al primo file esistente
+            }
+        }
+
+        if (fileTrovato == null) {
             inviaErrore(out, "ERR NOTFOUND");
             return;
         }
 
+        boolean statoInviato = false;
         try (BufferedReader fileReader = new BufferedReader(
-                new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
+                new InputStreamReader(new FileInputStream(fileTrovato), StandardCharsets.UTF_8))) {
 
             out.println("OK FILE");
+            out.println("TYPE " + estensioneTrovata);
             out.println();
+            statoInviato = true;
 
             String riga;
             while ((riga = fileReader.readLine()) != null) {
@@ -74,18 +90,18 @@ public class GestoreClient implements Runnable {
             }
 
         } catch (IOException e) {
-            System.err.println("Errore durante l'accesso al file " + file.getName() + ": " + e.getMessage());
-            if (!file.canRead()) {
+            System.err.println("Errore durante l'accesso al file " + fileTrovato.getName() + ": " + e.getMessage());
+            if (!statoInviato) {
                 inviaErrore(out, "ERR READ");
             }
         }
     }
 
     private boolean nomeValido(String nome) {
-        if (nome.contains("/") || nome.contains("\\") || nome.contains("..")) {
+        if (nome.isEmpty() || nome.contains(".") || nome.contains("/") || nome.contains("\\")) {
             return false;
         }
-        return nome.endsWith(".txt") && nome.length() > 4;
+        return true;
     }
 
     private void inviaErrore(PrintWriter out, String codiceErrore) {

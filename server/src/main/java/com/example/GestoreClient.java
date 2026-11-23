@@ -8,7 +8,11 @@ public class GestoreClient implements Runnable {
     private final Socket clientSocket;
     private final String cartella;
 
-    private static final String[] ESTENSIONI_AMMESSE = { "txt", "md", "csv" };
+    private static final String[][] TIPI = {
+        {"txt", "text/plain; charset=utf-8"},
+        {"md",  "text/markdown; charset=utf-8"},
+        {"csv", "text/csv; charset=utf-8"}
+    };
 
     public GestoreClient(Socket clientSocket, String cartella) {
         this.clientSocket = clientSocket;
@@ -59,14 +63,17 @@ public class GestoreClient implements Runnable {
 
         String nomeBase = parti[1];
         File fileTrovato = null;
-        String estensioneTrovata = null;
+        String contentTypeTrovato = null;
 
-        for (String ext : ESTENSIONI_AMMESSE) {
+        for (String[] rigaTipo : TIPI) {
+            String ext = rigaTipo[0];
+            String mimeType = rigaTipo[1];
+
             File candidato = new File(cartella, nomeBase + "." + ext);
             if (candidato.isFile()) {
                 fileTrovato = candidato;
-                estensioneTrovata = ext;
-                break; // Si ferma al primo file esistente
+                contentTypeTrovato = mimeType;
+                break;
             }
         }
 
@@ -80,7 +87,7 @@ public class GestoreClient implements Runnable {
                 new InputStreamReader(new FileInputStream(fileTrovato), StandardCharsets.UTF_8))) {
 
             out.println("OK FILE");
-            out.println("TYPE " + estensioneTrovata);
+            out.println("Content-Type: " + contentTypeTrovato);
             out.println();
             statoInviato = true;
 
